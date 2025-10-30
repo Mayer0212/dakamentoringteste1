@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Define a fonte Inter como padrão e customiza cores do Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Estilo para a barra de rolagem (opcional, mas melhora a estética) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Estilo customizado para o link da aba ativa */
+        .tab-link.active {
+            background-color: #f1f5f9; /* slate-100 */
+            color: #0f172a; /* slate-900 */
+            font-weight: 600;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    
+    <script type="module">
+        // Importações do Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuração do Firebase (substitua com suas credenciais)
+        // Em um ambiente real, essas chaves não devem ser expostas diretamente no código cliente.
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "SEU_AUTH_DOMAIN",
+            projectId: "SEU_PROJECT_ID",
+            storageBucket: "SEU_STORAGE_BUCKET",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SEU_APP_ID"
+        };
+
+        // Inicializa o Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Função para atualizar os cards de estatísticas
+        function setupStatsListener() {
+            const statsDocRef = doc(db, "painel", "estatisticas");
+            
+            onSnapshot(statsDocRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    document.getElementById('mentorias-ativas').textContent = data.mentoriasAtivas || '0';
+                    document.getElementById('mensagens-hoje').textContent = data.mensagensHoje || '0';
+                    document.getElementById('reunioes-agendadas').textContent = data.reunioesAgendadas || '0';
+                    document.getElementById('anotacoes-criadas').textContent = data.anotacoesCriadas || '0';
+                } else {
+                    console.log("Documento de estatísticas não encontrado!");
+                }
+            });
+        }
+
+        // Função para atualizar a lista de próximas reuniões
+        function setupReunioesListener() {
+            const reunioesQuery = query(collection(db, "reunioes"));
+
+            onSnapshot(reunioesQuery, (querySnapshot) => {
+                const reunioesContainer = document.getElementById('proximas-reunioes-lista');
+                reunioesContainer.innerHTML = ''; // Limpa a lista antes de adicionar os novos itens
+                if (querySnapshot.empty) {
+                    reunioesContainer.innerHTML = '<p class="text-sm text-slate-500">Nenhuma reunião agendada.</p>';
+                } else {
+                    querySnapshot.forEach((doc) => {
+                        const reuniao = doc.data();
+                        const reuniaoElement = `
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">${reuniao.titulo || 'Sem título'}</p>
+                                    <p class="text-sm text-slate-500">${reuniao.descricao || ''}</p>
+                                </div>
+                                <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full">${reuniao.data || ''}</span>
+                            </div>
+                        `;
+                        reunioesContainer.innerHTML += reuniaoElement;
+                    });
+                }
+            });
+        }
+
+        // Inicia os listeners quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            setupStatsListener();
+            setupReunioesListener();
+        });
+
+    </script>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden"></div>
+
+    <div class="flex h-screen bg-slate-100">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 transform -translate-x-full lg:static lg:translate-x-0">
+            <div class="hidden lg:flex h-16 items-center justify-center border-b border-slate-200">
+                <h1 class="text-xl font-bold text-slate-800">Meu Painel</h1>
+            </div>
+            
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#" class="tab-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors duration-200 active" data-tab="painel">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    Painel
+                </a>
+                <a href="#" class="tab-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors duration-200" data-tab="conversa">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Conversa
+                </a>
+                <a href="#" class="tab-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors duration-200" data-tab="anotacoes">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Anotações
+                </a>
+                <a href="#" class="tab-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors duration-200" data-tab="calendario">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 mr-3"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Calendário
+                </a>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col min-w-0"> <header class="lg:hidden sticky top-0 z-10 flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200">
+                <button id="menu-toggle-btn" class="p-2 rounded-md text-slate-600 hover:bg-slate-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h1 class="text-xl font-bold text-slate-800">Meu Painel</h1>
+                <div class="w-8"></div>
+            </header>
+
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+                
+                <div id="painel" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium text-slate-600">Mentorias Ativas</h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-slate-500"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            </div>
+                            <div>
+                                <div id="mentorias-ativas" class="text-2xl font-bold">0</div>
+                                <p class="text-xs text-slate-500">+2 desde a semana passada</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium text-slate-600">Mensagens Hoje</h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-slate-500"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <div>
+                                <div id="mensagens-hoje" class="text-2xl font-bold">0</div>
+                                <p class="text-xs text-slate-500">+12% desde ontem</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium text-slate-600">Reuniões Agendadas</h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-slate-500"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            </div>
+                            <div>
+                                <div id="reunioes-agendadas" class="text-2xl font-bold">0</div>
+                                <p class="text-xs text-slate-500">Próxima em 2 horas</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium text-slate-600">Anotações Criadas</h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-slate-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            </div>
+                            <div>
+                                <div id="anotacoes-criadas" class="text-2xl font-bold">0</div>
+                                <p class="text-xs text-slate-500">+23 esta semana</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold">Próximas Reuniões</h3>
+                                <p class="text-sm text-slate-500">Suas reuniões agendadas para os próximos dias.</p>
+                            </div>
+                            <div id="proximas-reunioes-lista" class="space-y-4">
+                                <p class="text-sm text-slate-500">Carregando reuniões...</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold">Informações Importantes</h3>
+                                <p class="text-sm text-slate-500">Atualizações e anúncios relevantes.</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="border-l-4 border-blue-500 pl-4">
+                                    <p class="font-medium">Nova ferramenta de simulação disponível</p>
+                                    <p class="text-sm text-slate-500">Ferramenta de modelagem de reservatórios foi atualizada com novos algoritmos.</p>
+                                </div>
+                                <div class="border-l-4 border-green-500 pl-4">
+                                    <p class="font-medium">Workshop sobre IA em Petróleo</p>
+                                    <p class="text-sm text-slate-500">Inscrições abertas para o workshop de 3 dias sobre aplicações de IA na indústria.</p>
+                                </div>
+                                <div class="border-l-4 border-orange-500 pl-4">
+                                    <p class="font-medium">Manutenção programada</p>
+                                    <p class="text-sm text-slate-500">Sistema ficará indisponível neste sábado das 22:00 às 02:00.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="conversa" class="tab-content hidden h-full">
+                    <div class="bg-white h-full p-6 rounded-xl border border-slate-200 flex flex-col">
+                        <h2 class="text-xl font-bold mb-4">Conversas</h2>
+                        <div class="flex-1 border rounded-lg p-4 space-y-4 overflow-y-auto">
+                            <div class="flex justify-start"><div class="bg-slate-200 text-slate-800 rounded-lg py-2 px-4 max-w-sm">Olá! Como posso ajudar hoje?</div></div>
+                            <div class="flex justify-end"><div class="bg-blue-600 text-white rounded-lg py-2 px-4 max-w-sm">Estou com uma dúvida sobre o relatório de produção.</div></div>
+                            <div class="flex justify-start"><div class="bg-slate-200 text-slate-800 rounded-lg py-2 px-4 max-w-sm">Claro, pode perguntar.</div></div>
+                        </div>
+                        <div class="mt-4 flex">
+                            <input type="text" placeholder="Digite sua mensagem..." class="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-semibold">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="anotacoes" class="tab-content hidden h-full">
+                    <div class="bg-white h-full p-6 rounded-xl border border-slate-200 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold">Minhas Anotações</h2>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-semibold text-sm">+ Nova Anotação</button>
+                        </div>
+                        <div class="flex-1 space-y-3 overflow-y-auto">
+                            <div class="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                                <h3 class="font-semibold">Revisar dados do Poço X</h3>
+                                <p class="text-sm text-slate-500 truncate">Verificar os dados de pressão e vazão das últimas 48 horas e comparar com o modelo...</p>
+                            </div>
+                            <div class="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                                <h3 class="font-semibold">Ideias para otimização</h3>
+                                <p class="text-sm text-slate-500 truncate">Discutir com a equipe a possibilidade de usar novos polímeros para injeção...</p>
+                            </div>
+                            <div class="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                                <h3 class="font-semibold">Pauta da reunião de sexta</h3>
+                                <p class="text-sm text-slate-500 truncate">1. Apresentação dos resultados do trimestre. 2. Planejamento do próximo...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="calendario" class="tab-content hidden h-full">
+                    <div class="bg-white h-full p-6 rounded-xl border border-slate-200 flex flex-col">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-bold">Outubro 2025</h2>
+                            <div class="flex space-x-2">
+                                <button class="p-2 rounded-lg hover:bg-slate-100">&lt;</button>
+                                <button class="p-2 rounded-lg hover:bg-slate-100">&gt;</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-slate-500">
+                            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 mt-2 flex-1">
+                            <div class="text-slate-400 p-2 rounded-lg">28</div>
+                            <div class="text-slate-400 p-2 rounded-lg">29</div>
+                            <div class="text-slate-400 p-2 rounded-lg">30</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">1</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">2</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">3</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">4</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">5</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">6</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">7</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">8</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">9</div>
+                            <div class="p-2 rounded-lg bg-blue-600 text-white font-bold relative">10 <span class="absolute h-1.5 w-1.5 bg-green-500 rounded-full bottom-1 left-1/2 -translate-x-1/2"></span></div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">11</div>
+                            <div class="p-2 rounded-lg hover:bg-slate-100 cursor-pointer">12</div>
+                            </div>
+                    </div>
+                </div>
+            </main>
+            
+        </div>
+    </div>
+
+    <script>
+        // Lógica para a troca de abas
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const tabContents = document.querySelectorAll('.tab-content');
+            // Elementos do menu mobile
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    
+                    const tabId = this.dataset.tab;
+
+                    // Remove a classe 'active' de todos os links
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    // Adiciona a classe 'active' ao link clicado
+                    this.classList.add('active');
+
+                    // Esconde todo o conteúdo
+                    tabContents.forEach(content => {
+                        if (!content.classList.contains('hidden')) {
+                            content.classList.add('hidden');
+                        }
+                    });
+                    
+                    // Mostra o conteúdo da aba correspondente
+                    const activeContent = document.getElementById(tabId);
+                    if (activeContent) {
+                        activeContent.classList.remove('hidden');
+                    }
+
+                    // *** NOVO: Fecha o menu mobile ao clicar em um item ***
+                    if (window.innerWidth < 1024) { // 1024px é o breakpoint 'lg'
+                        sidebar.classList.add('-translate-x-full');
+                        overlay.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        // *** NOVO: Lógica para o menu mobile (Hambúrguer) ***
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const toggleBtn = document.getElementById('menu-toggle-btn');
+
+            function toggleMenu() {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleMenu);
+            }
+            
+            if (overlay) {
+                overlay.addEventListener('click', toggleMenu);
+            }
+        });
+    </script>
+</body>
+</html>
